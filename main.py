@@ -34,15 +34,19 @@ def read_round_draft_data_specific_year(year, round, cur, conn):
     for item in cur.execute("SELECT * FROM DRAFTED_BY_ROUND"):
         print(item)
 
-def read_team_draft_data(team_name, year):
-    rays_2011_draft = amateur_draft_by_team("TBD", 2011)
-    for i in range(len(rays_2011_draft)):
+def read_team_draft_data(team_name, year, cur, conn):
+    draft_results = amateur_draft_by_team(team_name, year)
+    for i in range(len(draft_results)):
         # OvPck, Tm, Year, Round
-        OvPck = rays_2011_draft["OvPck"][i]
-        Tm = rays_2011_draft["Tm"][i]
-        Round = rays_2011_draft["Round"][i]
+        OvPck = draft_results["OvPck"][i]
+        name = draft_results["Name"][i]
+        Tm = draft_results["Tm"][i]
+        Round = draft_results["Round"][i]
+        pos = draft_results["Pos"][i]
+        tm = draft_results["Tm"][i]
         primary_key = int(str(year) + str(Round) + str(OvPck))
-        print(primary_key)
+        cur.execute("INSERT OR IGNORE INTO DRAFTED_BY_ROUND (id, name, position, team, year, round) VALUES (?, ?, ?, ?, ?, ?)", (primary_key, name, pos, tm, year, round))
+    conn.commit()
 
 def set_up_database(db_name):
     """
@@ -110,8 +114,8 @@ def main():
     # Set up database
     cur, conn = set_up_database("baseball.db")
     set_up_player_draft_data(cur, conn)
-    read_round_draft_data_specific_year(2017, 3, cur, conn)
-    #read_team_draft_data("TBD", 2011)
+    #read_round_draft_data_specific_year(2017, 3, cur, conn)
+    read_team_draft_data("TBD", 2011, cur, conn)
     #get_bwar_data()
 
     # Close database connection
