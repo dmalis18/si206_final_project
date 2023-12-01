@@ -1,0 +1,31 @@
+Team,Valid
+San Francisco Giants,True
+Oakland Athletics,True
+Pittsburgh Pirates,True
+Kansas City Royals,True
+Boston Red Sox,True
+Cincinnati Reds,True
+Tampa Bay Rays,False
+Arizona Diamondbacks,False
+St. Louis Cardinals,True
+Chicago Cubs,True
+Toronto Blue Jays,True
+New York Yankees,True
+Atlanta Braves,True
+Milwaukee Brewers,True
+Seattle Mariners,True
+New York Mets,True
+Los Angeles Dodgers,True
+Texas Rangers,True
+Los Angeles Angels,True
+Washington Nationals,True
+Miami Marlins,False
+Detroit Tigers,True
+Houston Astros,True
+Cleveland Guardians,True
+San Diego Padres,True
+Baltimore Orioles,True
+Minnesota Twins,True
+Chicago White Sox,True
+Colorado Rockies,False
+Philadelphia Phillies,True
