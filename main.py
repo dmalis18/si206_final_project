@@ -337,6 +337,73 @@ def create_draft_pick_success_plot():
     ax.xaxis.set_ticks(range(19,301,20))
     plt.show()
 
+def create_team_draft_success_plot():
+    teams = []
+    success_rates = []
+
+    file = open("team_draft_pick_success.csv", 'r')
+    file.readline()
+
+    for row in file:
+        vals = row.split(',')
+        teams.append(vals[0])
+        rate = int(vals[2]) / int(vals[1])
+        success_rates.append(rate)
+
+    file.close()
+
+    fig, ax = plt.subplots()
+    ax.bar(teams, success_rates)
+    ax.set_xlabel('Team')
+    ax.set_ylabel('Percent of picks that appeared in MLB')
+    ax.set_title('Draft success rate by team')
+    ax.tick_params(rotation=60)
+    plt.show()
+
+def create_draft_year_success_plot():
+
+    years = []
+    success_rates = []
+
+    file = open("draft_year_success.csv")
+    file.readline()
+
+    for row in file:
+        vals = row.split(',')
+        years.append(vals[0])
+        rate = int(vals[2]) / int(vals[1])
+        success_rates.append(rate)
+
+    fig, ax = plt.subplots()
+    ax.bar(years, success_rates)
+    ax.set_xlabel('Year')
+    ax.set_ylabel('Percent of picks that appeared in MLB')
+    ax.set_title('Draft success rate by year')
+    ax.tick_params(rotation=60)
+    plt.show()
+
+def create_signed_picks_by_year_plot():
+
+    years = []
+    picks = []
+
+    file = open("draft_year_success.csv")
+    file.readline()
+
+    for row in file:
+        vals = row.split(',')
+        years.append(vals[0])
+        picks.append(int(vals[1]))
+
+    fig, ax = plt.subplots()
+    ax.plot(years, picks)
+    ax.set_xlabel('Year')
+    ax.set_ylabel('Number of picks that signed')
+    ax.set_title('Total signed draft picks by year')
+    ax.tick_params(rotation=60)
+    plt.show()
+
+
 def main():
     """
     """
@@ -357,6 +424,9 @@ def main():
     get_draft_year_success_rate(cur, conn)
 
     # create_draft_pick_success_plot()
+    # create_team_draft_success_plot()
+    # create_draft_year_success_plot()
+    create_signed_picks_by_year_plot()
 
     # Close database connection
     conn.close()
