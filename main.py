@@ -66,8 +66,12 @@ def fill_team_draft_data_by_25(cur, conn, teams_dict):
             if counter < int(val):
                 counter += 1
                 continue
+            if row['G'] == 'False':
+                row['G'] = False
+            else:
+                row['G'] = True
             # Insert the team name and number into the database
-            cur.execute("INSERT OR IGNORE INTO DRAFTED_BY_TEAM (id, overall_pick, year, name, team_id) VALUES (?, ?, ?, ?, ?)", (row['id'], row['OvPck'], row['Year'], row['Name'], teams_dict[row['Tm']]))
+            cur.execute("INSERT OR IGNORE INTO DRAFTED_BY_TEAM (id, overall_pick, year, name, team_id, reached_majors) VALUES (?, ?, ?, ?, ?, ?)", (row['id'], row['OvPck'], row['Year'], row['Name'], teams_dict[row['Tm']], row['G']))
             counter += 1
             if counter >= int(val) + 25:
                 break
@@ -172,7 +176,7 @@ def set_up_database(db_name):
 
 def set_up_team_draft_data(cur, conn):
     cur.execute(
-        "CREATE TABLE IF NOT EXISTS DRAFTED_BY_TEAM (id INTEGER PRIMARY KEY, overall_pick INTEGER, year Integer, name TEXT, team_id INTEGER, FOREIGN KEY(team_id) REFERENCES TEAMS(id))"
+        "CREATE TABLE IF NOT EXISTS DRAFTED_BY_TEAM (id INTEGER PRIMARY KEY, overall_pick INTEGER, year Integer, name TEXT, team_id INTEGER, reached_majors BOOLEAN, FOREIGN KEY(team_id) REFERENCES TEAMS(id))"
     )
     conn.commit()
 
@@ -228,6 +232,14 @@ def read_active_teams(start_year:int, end_year:int, cur, conn):
                 file.write(f"{team},True\n")
             else:
                 file.write(f"{team},False\n")
+
+def get_number_draft_picks_reach_majors(cur, conn):
+    for i in range(300, 310):
+        reach_majors = cur.execute("SELECT COUNT(*) FROM DRAFTED_BY_TEAM WHERE overall_pick = ? AND reached_majors = TRUE", (i,)).fetchone()[0]
+        total_picks = cur.execute("SELECT COUNT(*) FROM DRAFTED_BY_TEAM WHERE overall_pick = ?", (i,)).fetchone()[0]
+        print(f"Overall Pick: {i}")
+        print(f"Total Picks: {total_picks}")
+        print(f"Reach Majors: {reach_majors}")
                 
 
 def main():
@@ -253,6 +265,8 @@ def main():
     populate_teams(cur, conn)
     populate_if_team_drafted_data(cur, conn)
     populate_team_draft_data(cur, conn)
+
+    get_number_draft_picks_reach_majors(cur, conn)
 
     # Close database connection
     conn.close()
