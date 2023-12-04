@@ -8,19 +8,124 @@ import json
 import os
 import requests
 
+def fill_teams_by_25(cur, conn):
+    # Read the team numbers from the CSV file
+    with open('team_number.csv', 'r') as csvfile:
+        # Create a CSV reader
+        csv_reader = csv.DictReader(csvfile)
+
+        # Iterate through each row in the CSV file
+        get_count = cur.execute("SELECT COUNT(*) FROM TEAMS")
+        val = (get_count.fetchone()[0])
+        counter = 0
+        for row in csv_reader:
+            if counter < int(val):
+                counter += 1
+                continue
+            # Insert the team name and number into the database
+            cur.execute("INSERT OR IGNORE INTO TEAMS (team_name, id) VALUES (?, ?)", (row['Team'],int(row['Number'])))
+            counter += 1
+            if counter >= int(val) + 25:
+                break
+        conn.commit()
+        return counter - val
+
+def fill_valid_teams_by_25(cur, conn):
+    # Read the team numbers from the CSV file
+    with open('valid_teams.csv', 'r') as csvfile:
+        # Create a CSV reader
+        csv_reader = csv.DictReader(csvfile)
+
+        # Iterate through each row in the CSV file
+        get_count = cur.execute("SELECT COUNT(*) FROM TEAM_DRAFTED")
+        val = (get_count.fetchone()[0])
+        counter = 0
+        for row in csv_reader:
+            if counter < int(val):
+                counter += 1
+                continue
+            # Insert the team name and number into the database
+            cur.execute("INSERT OR IGNORE INTO TEAM_DRAFTED (team_id, valid) VALUES (?, ?)", (counter,row['Valid']))
+            counter += 1
+            if counter >= int(val) + 25:
+                break
+        conn.commit()
+        return counter - val
+    
+def fill_team_draft_data_by_25(cur, conn, teams_dict):
+    # Read the team numbers from the CSV file
+    with open('draft_data.csv', 'r') as csvfile:
+        # Create a CSV reader
+        csv_reader = csv.DictReader(csvfile)
+
+        # Iterate through each row in the CSV file
+        get_count = cur.execute("SELECT COUNT(*) FROM DRAFTED_BY_TEAM")
+        val = (get_count.fetchone()[0])
+        counter = 0
+        for row in csv_reader:
+            if counter < int(val):
+                counter += 1
+                continue
+            # Insert the team name and number into the database
+            cur.execute("INSERT OR IGNORE INTO DRAFTED_BY_TEAM (id, overall_pick, year, name, team_id) VALUES (?, ?, ?, ?, ?)", (row['id'], row['OvPck'], row['Year'], row['Name'], teams_dict[row['Tm']]))
+            counter += 1
+            if counter >= int(val) + 25:
+                break
+        conn.commit()
+        return counter - val
+
 def populate_teams(cur, conn):
-    pass
+    with open('valid_teams.csv', 'r') as csvfile:
+        # Create a CSV reader
+        csv_reader = csv.DictReader(csvfile)
+
+        # Open the output file for writing
+        with open('team_number.csv', 'w') as outfile:
+            # Write header to the file
+            outfile.write("Team,Number\n")
+
+            # Counter to assign numbers
+            team_counter = 1
+
+            # Iterate through each row in the CSV file
+            for row in csv_reader:
+                # Write team name and its corresponding number to the file
+                outfile.write(f"{row['Team']},{team_counter}\n")
+
+                # Increment the counter
+                team_counter += 1
+    val = 1
+    while(val != 0):
+        val = fill_teams_by_25(cur, conn)
+        print(f"Filled {val} teams")
+    print("Finished filling teams")
+    
 
 def populate_if_team_drafted_data(cur, conn):
-    pass
+    # For each row in valid_teams.csv check if the valid team is True/False and insert to table
+    val = -1
+    while(val != 0):
+        val = fill_valid_teams_by_25(cur, conn)
+        print(f"Filled {val} teams")
+    print("Finished filling teams")
 
 def populate_team_draft_data(cur, conn):
-    pass
+    val = -1
+    teams_dict = {}
+    cur.execute("SELECT * FROM TEAMS")
+    for row in cur:
+        teams_dict[row[1]] = row[0]
+    print(teams_dict)
+    while(val != 0):
+        val = fill_team_draft_data_by_25(cur, conn, teams_dict)
+        print(f"Filled {val} players")
+    print("Finished filling players")
+    print("Size of DRAFTED_BY_TEAM: ", cur.execute("SELECT COUNT(*) FROM DRAFTED_BY_TEAM").fetchone()[0])
 
 def read_team_draft_data(team_name, year):
     draft_results = amateur_draft_by_team(team_name, year)
 
-    with open('draft_data.txt', 'a', newline='') as csvfile:
+    with open('draft_data.csv', 'a', newline='') as csvfile:
         fieldnames = ['id', 'Year', 'OvPck', 'Name', 'Tm', 'Round', 'Pos', 'G']  # Add the field names as per your data
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
@@ -67,13 +172,13 @@ def set_up_database(db_name):
 
 def set_up_team_draft_data(cur, conn):
     cur.execute(
-        "CREATE TABLE IF NOT EXISTS DRAFTED_BY_TEAM (id INTEGER PRIMARY KEY, draft_pick INTEGER, name TEXT)"
+        "CREATE TABLE IF NOT EXISTS DRAFTED_BY_TEAM (id INTEGER PRIMARY KEY, overall_pick INTEGER, year Integer, name TEXT, team_id INTEGER, FOREIGN KEY(team_id) REFERENCES TEAMS(id))"
     )
     conn.commit()
 
 def set_up_if_team_drafted_data(cur, conn):
     cur.execute(
-        "CREATE TABLE IF NOT EXISTS TEAM_DRAFTED (id INTEGER PRIMARY KEY, draft_pick INTEGER, name TEXT)"
+        "CREATE TABLE IF NOT EXISTS TEAM_DRAFTED (team_id INTEGER PRIMARY KEY, valid BOOLEAN)"
     )
     conn.commit()
 
@@ -85,7 +190,7 @@ def set_up_teams(cur, conn):
 
 def get_all_needed_draft_data():
     teams = ['ANA','HOU','OAK','TOR','ATL','MIL', 'STL','CHC','TBD','ARI','LAD','SFG','CLE','SEA','FLA','NYM','WSN','BAL','SDP','PHI','PIT','TEX','BOS','CIN','COL','KCR','DET','MIN','CHW','NYY']
-    with open('draft_data.txt', 'w', newline='') as csvfile:
+    with open('draft_data.csv', 'w', newline='') as csvfile:
         fieldnames = ['id', 'Year', 'OvPck', 'Name', 'Tm', 'Round', 'Pos', 'G']  # Add the field names as per your data
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
