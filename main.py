@@ -45,9 +45,14 @@ def fill_valid_teams_by_25(cur, conn):
             if counter < int(val):
                 counter += 1
                 continue
+            print(row['Valid'])
+            if row['Valid'] == 'False':
+                row['Valid'] = False
+            else:
+                row['Valid'] = True
             # Insert the team name and number into the database
-            cur.execute("INSERT OR IGNORE INTO TEAM_DRAFTED (team_id, valid) VALUES (?, ?)", (counter,row['Valid']))
             counter += 1
+            cur.execute("INSERT OR IGNORE INTO TEAM_DRAFTED (team_id, valid) VALUES (?, ?)", (counter,row['Valid']))
             if counter >= int(val) + 25:
                 break
         conn.commit()
@@ -248,6 +253,72 @@ def get_number_draft_picks_reach_majors(cur, conn):
 
     file.close()
 
+def get_team_success_rate(cur, conn):
+    file = open("team_draft_pick_success.csv", 'w')
+    file.write("TeamName,TotalPicks,ReachedMajors\n")
+    for team_id in range(1, 31):
+        query = """
+                    SELECT t3.team_name, COUNT(*)
+                    FROM TEAMS as t3
+                    JOIN TEAM_DRAFTED as t2 ON t3.id = t2.team_id
+                    JOIN DRAFTED_BY_TEAM as t1 ON t2.team_id = t1.team_id
+                    WHERE t3.id = ? AND t1.reached_majors = TRUE AND t2.valid = TRUE
+                    GROUP BY t3.team_name
+                """
+        output = cur.execute(query, (team_id,)).fetchone()
+        if output is None:
+            print(f"Team ID: {team_id} is invalid")
+        else:
+            team_name, reached_majors = output
+        query2 = """
+                    SELECT t3.team_name, COUNT(*)
+                    FROM TEAMS as t3
+                    JOIN TEAM_DRAFTED as t2 ON t3.id = t2.team_id
+                    JOIN DRAFTED_BY_TEAM as t1 ON t2.team_id = t1.team_id
+                    WHERE t3.id = ? AND t2.valid = TRUE
+                    GROUP BY t3.team_name
+                """
+        output2 = cur.execute(query2, (team_id,)).fetchone()
+        if output2 is None:
+            print(f"Team ID: {team_id} is invalid")
+        else:
+            team_name2, total_signed_picks = output2
+        assert(team_name == team_name2)
+        print(f"Team ID: {team_name}")
+        print(f"Total Picks: {total_signed_picks}")
+        print(f"Reach Majors: {reached_majors}")
+        file.write(f"{team_name},{total_signed_picks},{reached_majors}\n")
+
+    file.close()
+
+def get_draft_year_success_rate(cur, conn):
+    file = open("draft_year_success.csv", 'w')
+    file.write("DraftYear,TotalPicks,ReachedMajors\n")
+    for team_id in range(1990, 2016):
+        query = """
+                    SELECT t1.year, COUNT(*)
+                    FROM DRAFTED_BY_TEAM as t1
+                    WHERE t1.year = ? AND t1.reached_majors = TRUE
+                    GROUP BY t1.year
+                """
+        output = cur.execute(query, (team_id,)).fetchone()
+        year, reached_majors = output
+        query2 = """
+                    SELECT t1.year, COUNT(*)
+                    FROM DRAFTED_BY_TEAM as t1
+                    WHERE t1.year = ?
+                    GROUP BY t1.year
+                """
+        output2 = cur.execute(query2,(team_id,)).fetchone()
+        year2, total_signed_picks = output2
+        assert(year == year2)
+        print(f"Year: {year}")
+        print(f"Total Picks: {total_signed_picks}")
+        print(f"Reach Majors: {reached_majors}")
+        file.write(f"{year},{total_signed_picks},{reached_majors}\n")
+
+    file.close()
+
 def create_draft_pick_success_plot():
     pick_nums = [str(i) for i in range(1,301)]
     success_rates = []
@@ -268,15 +339,6 @@ def create_draft_pick_success_plot():
 
 def main():
     """
-    Main execution function.
-
-    Parameters
-    -----------------------
-    None
-
-    Returns
-    -----------------------
-    None
     """
 
     # Set up database
@@ -291,8 +353,10 @@ def main():
     populate_team_draft_data(cur, conn)
 
     get_number_draft_picks_reach_majors(cur, conn)
+    get_team_success_rate(cur, conn)
+    get_draft_year_success_rate(cur, conn)
 
-    create_draft_pick_success_plot()
+    # create_draft_pick_success_plot()
 
     # Close database connection
     conn.close()
