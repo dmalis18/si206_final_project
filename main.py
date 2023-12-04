@@ -7,6 +7,7 @@ import numpy as np
 import json
 import os
 import requests
+import matplotlib.pyplot as plt
 
 def fill_teams_by_25(cur, conn):
     # Read the team numbers from the CSV file
@@ -236,7 +237,7 @@ def read_active_teams(start_year:int, end_year:int, cur, conn):
 def get_number_draft_picks_reach_majors(cur, conn):
     file = open("draft_pick_success.csv", 'w')
     file.write("OverallPick,TotalPicks,ReachedMajors\n")
-    for i in range(1, 101):
+    for i in range(1, 301):
         reach_majors = cur.execute("SELECT COUNT(*) FROM DRAFTED_BY_TEAM WHERE overall_pick = ? AND reached_majors = TRUE", (i,)).fetchone()[0]
         total_picks = cur.execute("SELECT COUNT(*) FROM DRAFTED_BY_TEAM WHERE overall_pick = ?", (i,)).fetchone()[0]
         print(f"Overall Pick: {i}")
@@ -247,7 +248,23 @@ def get_number_draft_picks_reach_majors(cur, conn):
 
     file.close()
 
-                
+def create_draft_pick_success_plot():
+    pick_nums = [str(i) for i in range(1,301)]
+    success_rates = []
+    with open("draft_pick_success.csv", 'r') as file:
+        file.readline()
+        for row in file:
+            nums = row.split(",")
+            rate = int(nums[2]) / int(nums[1])
+            success_rates.append(rate)
+
+    fig, ax = plt.subplots()
+    ax.plot(pick_nums, success_rates)
+    ax.set_xlabel('Overall Pick')
+    ax.set_ylabel('Percent of picks that appeared in MLB')
+    ax.set_title('Draft success rate by overall pick slot')
+    ax.xaxis.set_ticks(range(19,301,20))
+    plt.show()
 
 def main():
     """
@@ -274,6 +291,8 @@ def main():
     populate_team_draft_data(cur, conn)
 
     get_number_draft_picks_reach_majors(cur, conn)
+
+    create_draft_pick_success_plot()
 
     # Close database connection
     conn.close()
