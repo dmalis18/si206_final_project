@@ -234,12 +234,19 @@ def read_active_teams(start_year:int, end_year:int, cur, conn):
                 file.write(f"{team},False\n")
 
 def get_number_draft_picks_reach_majors(cur, conn):
-    for i in range(300, 310):
+    file = open("draft_pick_success.csv", 'w')
+    file.write("OverallPick,TotalPicks,ReachedMajors\n")
+    for i in range(1, 101):
         reach_majors = cur.execute("SELECT COUNT(*) FROM DRAFTED_BY_TEAM WHERE overall_pick = ? AND reached_majors = TRUE", (i,)).fetchone()[0]
         total_picks = cur.execute("SELECT COUNT(*) FROM DRAFTED_BY_TEAM WHERE overall_pick = ?", (i,)).fetchone()[0]
         print(f"Overall Pick: {i}")
         print(f"Total Picks: {total_picks}")
         print(f"Reach Majors: {reach_majors}")
+
+        file.write(f"{i},{total_picks},{reach_majors}\n")
+
+    file.close()
+
                 
 
 def main():
