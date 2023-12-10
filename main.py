@@ -1,15 +1,18 @@
-import unittest
 from pybaseball import amateur_draft
 from pybaseball import amateur_draft_by_team
 import sqlite3
 import csv
 import numpy as np
-import json
 import os
 import requests
 import matplotlib.pyplot as plt
 
 def fill_teams_by_25(cur, conn):
+    '''
+    Fills the teams table with 25 teams at a time
+    input: cur, conn
+    output: number of teams added
+    '''
     # Read the team numbers from the CSV file
     with open('team_number.csv', 'r') as csvfile:
         # Create a CSV reader
@@ -32,6 +35,11 @@ def fill_teams_by_25(cur, conn):
         return counter - val
 
 def fill_valid_teams_by_25(cur, conn):
+    '''
+    Fills the valid teams table with 25 teams at a time
+    input: cur, conn
+    output: number of valid teams added
+    '''
     # Read the team numbers from the CSV file
     with open('valid_teams.csv', 'r') as csvfile:
         # Create a CSV reader
@@ -59,6 +67,11 @@ def fill_valid_teams_by_25(cur, conn):
         return counter - val
     
 def fill_team_draft_data_by_25(cur, conn, teams_dict):
+    '''
+    Fills the drafted by team table with 25 players at a time
+    input: cur, conn, teams_dict: dictionary of team names to team ids
+    output: number of players added
+    '''
     # Read the team numbers from the CSV file
     with open('draft_data.csv', 'r') as csvfile:
         # Create a CSV reader
@@ -85,6 +98,11 @@ def fill_team_draft_data_by_25(cur, conn, teams_dict):
         return counter - val
 
 def populate_teams(cur, conn):
+    '''
+    Populates the teams table with team names and numbers
+    input: cur, conn
+    output: None
+    '''
     with open('valid_teams.csv', 'r') as csvfile:
         # Create a CSV reader
         csv_reader = csv.DictReader(csvfile)
@@ -112,6 +130,11 @@ def populate_teams(cur, conn):
     
 
 def populate_if_team_drafted_data(cur, conn):
+    '''
+    Populates the valid teams table with team names and numbers
+    input: cur, conn
+    output: None
+    '''
     # For each row in valid_teams.csv check if the valid team is True/False and insert to table
     val = -1
     while(val != 0):
@@ -120,6 +143,11 @@ def populate_if_team_drafted_data(cur, conn):
     print("Finished filling teams")
 
 def populate_team_draft_data(cur, conn):
+    '''
+    Populates the drafted by team table with team names and numbers
+    input: cur, conn
+    output: None
+    '''
     val = -1
     teams_dict = {}
     cur.execute("SELECT * FROM TEAMS")
@@ -133,6 +161,19 @@ def populate_team_draft_data(cur, conn):
     print("Size of DRAFTED_BY_TEAM: ", cur.execute("SELECT COUNT(*) FROM DRAFTED_BY_TEAM").fetchone()[0])
 
 def read_team_draft_data(team_name, year):
+    """
+    Reads the draft data for a given team and year and writes it to a CSV file.
+    draft data = [OvPck, Name, Tm, Pos, Signed, Round, G]
+    Parameters
+    -----------------------
+    team_name: str
+        The name of the team.
+    year: int
+        The year of the draft.
+    
+    Returns
+    -----------------------
+    """
     draft_results = amateur_draft_by_team(team_name, year)
 
     with open('draft_data.csv', 'a', newline='') as csvfile:
@@ -181,24 +222,46 @@ def set_up_database(db_name):
     return cur, conn
 
 def set_up_team_draft_data(cur, conn):
+    '''
+    Sets up the drafted by team table
+    input: cur, conn
+    output: None
+    '''
     cur.execute(
         "CREATE TABLE IF NOT EXISTS DRAFTED_BY_TEAM (id INTEGER PRIMARY KEY, overall_pick INTEGER, year Integer, name TEXT, team_id INTEGER, reached_majors BOOLEAN, FOREIGN KEY(team_id) REFERENCES TEAMS(id))"
     )
     conn.commit()
 
 def set_up_if_team_drafted_data(cur, conn):
+    '''
+    Sets up the valid teams table
+    input: cur, conn
+    output: None
+    '''
     cur.execute(
         "CREATE TABLE IF NOT EXISTS TEAM_DRAFTED (team_id INTEGER PRIMARY KEY, valid BOOLEAN)"
     )
     conn.commit()
 
 def set_up_teams(cur, conn):
+    '''
+    Sets up the teams table
+    input: cur, conn
+    output: None
+    '''
     cur.execute(
         "CREATE TABLE IF NOT EXISTS TEAMS(id INTEGER PRIMARY KEY, team_name TEXT)"
     )
     conn.commit()
 
 def get_all_needed_draft_data():
+    '''
+    Get all draft data from 1990-2015
+    input: None
+    output: None
+
+    Makes calls to read_team_draft_data to get all draft data from 1990-2015
+    '''
     teams = ['ANA','HOU','OAK','TOR','ATL','MIL', 'STL','CHC','TBD','ARI','LAD','SFG','CLE','SEA','FLA','NYM','WSN','BAL','SDP','PHI','PIT','TEX','BOS','CIN','COL','KCR','DET','MIN','CHW','NYY']
     with open('draft_data.csv', 'w', newline='') as csvfile:
         fieldnames = ['id', 'Year', 'OvPck', 'Name', 'Tm', 'Round', 'Pos', 'G']  # Add the field names as per your data
@@ -213,6 +276,11 @@ def get_all_needed_draft_data():
                 print(team, year)
 
 def read_active_teams(start_year:int, end_year:int, cur, conn):
+    '''
+    Reads the active teams from 1990-2015 and writes it to a CSV file.
+    input: start_year, end_year, cur, conn
+    output: None
+    '''
     # build set of all teams from 2022
     all_teams_set = set()
     resp = requests.get(f"http://lookup-service-prod.mlb.com/json/named.team_all_season.bam?sport_code='mlb'&all_star_sw='N'&sort_order=name_asc&season='2022'")
@@ -240,6 +308,11 @@ def read_active_teams(start_year:int, end_year:int, cur, conn):
                 file.write(f"{team},False\n")
 
 def get_number_draft_picks_reach_majors(cur, conn):
+    '''
+    Get the number of draft picks that reached the majors by overall pick and write to csv
+    input: cur, conn
+    output: None
+    '''
     file = open("draft_pick_success.csv", 'w')
     file.write("OverallPick,TotalPicks,ReachedMajors\n")
     for i in range(1, 301):
@@ -254,6 +327,11 @@ def get_number_draft_picks_reach_majors(cur, conn):
     file.close()
 
 def get_team_success_rate(cur, conn):
+    '''
+    Get the number of draft picks that reached the majors by team and write to csv
+    input: cur, conn
+    output: None
+    '''
     file = open("team_draft_pick_success.csv", 'w')
     file.write("TeamName,TotalPicks,ReachedMajors\n")
     for team_id in range(1, 31):
@@ -292,6 +370,11 @@ def get_team_success_rate(cur, conn):
     file.close()
 
 def get_draft_year_success_rate(cur, conn):
+    '''
+    Get the number of draft picks that reached the majors by year and write to csv
+    input: cur, conn
+    output: None
+    '''
     file = open("draft_year_success.csv", 'w')
     file.write("DraftYear,TotalPicks,ReachedMajors\n")
     for team_id in range(1990, 2016):
@@ -320,6 +403,11 @@ def get_draft_year_success_rate(cur, conn):
     file.close()
 
 def create_draft_pick_success_plot():
+    '''
+    Creates a plot of draft success rate by overall pick
+    input: None
+    output: None
+    '''
     pick_nums = [str(i) for i in range(1,301)]
     success_rates = []
     with open("draft_pick_success.csv", 'r') as file:
@@ -338,6 +426,11 @@ def create_draft_pick_success_plot():
     plt.show()
 
 def create_team_draft_success_plot():
+    '''
+    Creates a plot of draft success rate by team
+    input: None
+    output: None
+    '''
     teams = []
     success_rates = []
 
@@ -361,7 +454,11 @@ def create_team_draft_success_plot():
     plt.show()
 
 def create_draft_year_success_plot():
-
+    '''
+    Creates a plot of draft success rate by year
+    input: None
+    output: None
+    '''
     years = []
     success_rates = []
 
@@ -383,7 +480,11 @@ def create_draft_year_success_plot():
     plt.show()
 
 def create_signed_picks_by_year_plot():
-
+    '''
+    Creates a plot of number of signed draft picks by year
+    input: None
+    output: None
+    '''
     years = []
     picks = []
 
@@ -406,6 +507,7 @@ def create_signed_picks_by_year_plot():
 
 def main():
     """
+    Main function that runs the program.
     """
 
     # Set up database
